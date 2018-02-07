@@ -144,6 +144,9 @@ var (
 	// closed. If encountered, the error should be considered terminal and
 	// retries will not be successful.
 	ErrSinkClosed = fmt.Errorf("sink: closed")
+
+	// ErrHitMaxRetries is returned if max retries is reached without success
+	ErrHitMaxRetries = fmt.Errorf("reached max retries for sending event")
 )
 
 // Sink accepts and sends events.

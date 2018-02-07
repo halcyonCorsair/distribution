@@ -12,6 +12,7 @@ type EndpointConfig struct {
 	Timeout           time.Duration
 	Threshold         int
 	Backoff           time.Duration
+	MaxRetries        int
 	IgnoredMediaTypes []string
 	Transport         *http.Transport `json:"-"`
 }
@@ -24,6 +25,10 @@ func (ec *EndpointConfig) defaults() {
 
 	if ec.Threshold <= 0 {
 		ec.Threshold = 10
+	}
+
+	if ec.MaxRetries <= 0 {
+		ec.MaxRetries = 100
 	}
 
 	if ec.Backoff <= 0 {
@@ -61,7 +66,7 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 	endpoint.Sink = newHTTPSink(
 		endpoint.url, endpoint.Timeout, endpoint.Headers,
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
-	endpoint.Sink = newRetryingSink(endpoint.Sink, endpoint.Threshold, endpoint.Backoff)
+	endpoint.Sink = newRetryingSink(endpoint.Sink, endpoint.Threshold, endpoint.Backoff, endpoint.MaxRetries)
 	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
 	endpoint.Sink = newIgnoredMediaTypesSink(endpoint.Sink, config.IgnoredMediaTypes)
 

@@ -146,7 +146,6 @@ func TestIgnoredMediaTypesSink(t *testing.T) {
 }
 
 func TestRetryingSink(t *testing.T) {
-
 	// Make a sync that fails most of the time, ensuring that all the events
 	// make it through.
 	var ts testSink
@@ -154,7 +153,7 @@ func TestRetryingSink(t *testing.T) {
 		rate: 1.0, // start out always failing.
 		Sink: &ts,
 	}
-	s := newRetryingSink(flaky, 3, 10*time.Millisecond)
+	s := newRetryingSink(flaky, 3, 10*time.Millisecond, 0)
 
 	var wg sync.WaitGroup
 	var block []Event
@@ -189,6 +188,48 @@ func TestRetryingSink(t *testing.T) {
 
 	if len(ts.events) != 100 {
 		t.Fatalf("events not propagated: %d != %d", len(ts.events), 100)
+	}
+}
+
+func TestRetryingSinkMaxRetries(t *testing.T) {
+	var ts testSink
+	flaky := &flakySink{
+		rate: 1.0, // start out always failing.
+		Sink: &ts,
+	}
+	threshold := 2
+	maxRetries := 4
+	s := newRetryingSink(flaky, threshold, 200*time.Millisecond, maxRetries)
+
+	// Fail until we hit max retries to drop an event before adjusting failure
+	// rate and succeeding with subsequent events
+	var block []Event
+	block = append(block, createTestEvent("push", "library/test", "blob"))
+	if err := s.Write(block...); err != nil {
+		if err != ErrHitMaxRetries {
+			t.Fatalf("error writing event block: %v", err)
+		}
+	}
+
+	// Adjust flaky sink to succeed (ie. endpoint comes back)
+	flaky.rate = 0
+	block = make([]Event, 0, 1)
+	block = append(block, createTestEvent("push", "library/test2", "blob"))
+	if err := s.Write(block...); err != nil {
+		if err != ErrHitMaxRetries {
+			t.Errorf("1: error writing event block: %v", err)
+		} else {
+			t.Fatalf("error writing event block: %v", err)
+		}
+	}
+
+	checkClose(t, s)
+
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+
+	if len(ts.events) != 1 {
+		t.Fatalf("events not propagated: %d != %d", len(ts.events), 1)
 	}
 }
 

@@ -261,9 +261,11 @@ type retryingSink struct {
 	// circuit breaker heuristics
 	failures struct {
 		threshold int
+		total     int
 		recent    int
 		last      time.Time
 		backoff   time.Duration // time after which we retry after failure.
+		max       int           // maximum number of retries
 	}
 }
 
@@ -279,12 +281,13 @@ type retryingSinkListener interface {
 // newRetryingSink returns a sink that will retry writes to a sink, backing
 // off on failure. Parameters threshold and backoff adjust the behavior of the
 // circuit breaker.
-func newRetryingSink(sink Sink, threshold int, backoff time.Duration) *retryingSink {
+func newRetryingSink(sink Sink, threshold int, backoff time.Duration, max int) *retryingSink {
 	rs := &retryingSink{
 		sink: sink,
 	}
 	rs.failures.threshold = threshold
 	rs.failures.backoff = backoff
+	rs.failures.max = max
 
 	return rs
 }
@@ -299,6 +302,11 @@ retry:
 
 	if rs.closed {
 		return ErrSinkClosed
+	}
+
+	if rs.failures.max > 0 && rs.failures.total > rs.failures.max {
+		rs.reset()
+		return ErrHitMaxRetries
 	}
 
 	if !rs.proceed() {
@@ -355,15 +363,17 @@ func (rs *retryingSink) wait(backoff time.Duration) {
 	time.Sleep(backoff)
 }
 
-// reset marks a successful call.
+// reset marks a successful call, or hitting max retries.
 func (rs *retryingSink) reset() {
 	rs.failures.recent = 0
+	rs.failures.total = 0
 	rs.failures.last = time.Time{}
 }
 
 // failure records a failure.
 func (rs *retryingSink) failure() {
 	rs.failures.recent++
+	rs.failures.total++
 	rs.failures.last = time.Now().UTC()
 }
 

@@ -231,6 +231,7 @@ notifications:
       timeout: 1s
       threshold: 10
       backoff: 1s
+      maxretries: 50
       ignoredmediatypes:
         - application/octet-stream
 redis:
@@ -840,6 +841,7 @@ notifications:
       timeout: 1s
       threshold: 10
       backoff: 1s
+      maxretries: 50
       ignoredmediatypes:
         - application/octet-stream
 ```
@@ -860,6 +862,7 @@ accept event notifications.
 | `headers` | yes      | A list of static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
 | `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
+| `maxretries` | yes    | An integer specifying how many times to retry before dropping an event. |
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 

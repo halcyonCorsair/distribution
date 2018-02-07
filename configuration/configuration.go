@@ -555,6 +555,7 @@ type Endpoint struct {
 	Timeout           time.Duration `yaml:"timeout"`           // HTTP timeout
 	Threshold         int           `yaml:"threshold"`         // circuit breaker threshold before backing off on failure
 	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
+	MaxRetries        int           `yaml:"maxretries"`        // maximum number of retries before dropping event
 	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
 }
 
